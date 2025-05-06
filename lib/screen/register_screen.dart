@@ -1,6 +1,8 @@
+import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:laundryapp/screen/login_screen.dart';
 import 'package:laundryapp/service/auth_service.dart';
 
@@ -12,32 +14,22 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final _usernameController =
-      TextEditingController(); // Added username controller
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final AuthService _authService = AuthService();
   bool _isPasswordVisible = false;
-  final String _defaultRole = 'user'; // Default role set to 'user'
+  final String _defaultRole = 'user';
 
   Future<void> _register() async {
-    String username = _usernameController.text.trim(); // Get username
+    String username = _usernameController.text.trim();
     String email = _emailController.text.trim();
     String password = _passwordController.text.trim();
 
-    // Validate username
-    if (username.isEmpty) {
+    if (username.isEmpty || email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Username harus diisi')));
-      return;
-    }
-
-    // Validate email
-    if (email.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Email harus diisi')));
+      ).showSnackBar(const SnackBar(content: Text('Semua field harus diisi')));
       return;
     }
 
@@ -45,14 +37,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Email tidak valid')));
-      return;
-    }
-
-    // Validate password
-    if (password.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Password harus diisi')));
       return;
     }
 
@@ -64,25 +48,21 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     try {
-      // Create new user
       UserCredential userCredential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: email, password: password);
 
-      // Hash password
       String hashedPassword = _authService.hashPassword(password);
 
-      // Save user data to Firestore with default role 'user' and active status 'true'
       await FirebaseFirestore.instance
           .collection('users')
           .doc(userCredential.user?.uid)
           .set({
-            'username': username, // Added username field
+            'username': username,
             'email': email,
             'role': _defaultRole,
             'password': hashedPassword,
-            'status': 'active', // Default active status
-            'createdAt':
-                FieldValue.serverTimestamp(), // Optional: add timestamp
+            'status': 'active',
+            'createdAt': FieldValue.serverTimestamp(),
           });
 
       ScaffoldMessenger.of(
@@ -96,75 +76,165 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
       }
     } on FirebaseAuthException catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Gagal menambahkan user: ${e.message}")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Gagal registrasi: ${e.message}")));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        title: const Text('Register user'),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          children: [
-            // Username field (added above email)
-            TextField(
-              controller: _usernameController,
-              decoration: const InputDecoration(
-                labelText: 'Username',
-                hintText: 'Masukkan username Anda',
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Email field
-            TextField(
-              controller: _emailController,
-              decoration: const InputDecoration(
-                labelText: 'Email',
-                hintText: 'Masukkan email Anda',
-              ),
-            ),
-            const SizedBox(height: 20),
-
-            // Password field
-            TextField(
-              controller: _passwordController,
-              decoration: InputDecoration(
-                labelText: 'Password',
-                hintText: 'Masukkan password (min. 6 karakter)',
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _isPasswordVisible
-                        ? Icons.visibility
-                        : Icons.visibility_off,
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF89F7FE), Color(0xFF66A6FF)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    ),
+                    child: Column(
+                      children: [
+                        const Icon(
+                          Icons.local_laundry_service_rounded,
+                          size: 80,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          'Sign Up',
+                          style: GoogleFonts.poppins(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _buildTextField(
+                          controller: _usernameController,
+                          label: 'Username',
+                          icon: Icons.person_outline,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _emailController,
+                          label: 'Email',
+                          icon: Icons.email_outlined,
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
+                          controller: _passwordController,
+                          label: 'Password',
+                          icon: Icons.lock_outline,
+                          obscureText: !_isPasswordVisible,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _isPasswordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.white,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _isPasswordVisible = !_isPasswordVisible;
+                              });
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _register,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.blueAccent,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              elevation: 6,
+                            ),
+                            child: Text(
+                              'Daftar',
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        TextButton(
+                          onPressed: () {
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => LoginScreen(),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            'Sudah punya akun? Masuk',
+                            style: GoogleFonts.poppins(
+                              color: Colors.white70,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  onPressed: () {
-                    setState(() {
-                      _isPasswordVisible = !_isPasswordVisible;
-                    });
-                  },
                 ),
               ),
-              obscureText: !_isPasswordVisible,
             ),
-            const SizedBox(height: 30),
+          ),
+        ),
+      ),
+    );
+  }
 
-            // Register button
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: _register,
-                child: const Text('Daftar'),
-              ),
-            ),
-          ],
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    bool obscureText = false,
+    Widget? suffixIcon,
+  }) {
+    return TextField(
+      controller: controller,
+      obscureText: obscureText,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        labelText: label,
+        labelStyle: const TextStyle(color: Colors.white),
+        prefixIcon: Icon(icon, color: Colors.white),
+        suffixIcon: suffixIcon,
+        filled: true,
+        fillColor: Colors.white.withOpacity(0.1),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.white.withOpacity(0.5)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: Colors.white),
         ),
       ),
     );
